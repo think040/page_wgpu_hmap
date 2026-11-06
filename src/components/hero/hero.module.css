@@ -1,0 +1,242 @@
+.hero {
+  position: relative;
+  height: 100svh;
+  min-height: 560px;
+  background: #0d0c0b;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  outline: none;
+  touch-action: none;
+}
+/* 터치 기기에서 3D 조작이 꺼져 있으면 세로 스크롤을 우선한다 */
+.canvas[data-touch="off"] {
+  touch-action: pan-y;
+}
+.canvas:active {
+  cursor: grabbing;
+}
+.canvas:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(217, 179, 124, 0.35);
+}
+
+.copy {
+  position: absolute;
+  left: clamp(20px, 5vw, 72px);
+  bottom: clamp(72px, 12vh, 140px);
+  max-width: 360px;
+  color: #2a241e;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.eyebrow {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(42, 36, 30, 0.6);
+  margin-bottom: 14px;
+}
+
+.title {
+  font-size: clamp(30px, 3.6vw, 52px);
+  line-height: 1.12;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  margin-top: 18px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(42, 36, 30, 0.78);
+  max-width: 340px;
+}
+
+.hud {
+  position: absolute;
+  top: 84px;
+  left: clamp(20px, 5vw, 72px);
+  display: flex;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(20, 18, 16, 0.55);
+  color: #e9e3d9;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(20, 18, 16, 0.55);
+  color: #e9e3d9;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.panelToggle {
+  position: absolute;
+  top: 84px;
+  right: 16px;
+  z-index: 3;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(28, 28, 30, 0.85);
+  color: #e9e3d9;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.panelToggle:hover {
+  background: rgba(40, 40, 42, 0.92);
+}
+
+.loader {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  color: #cfc8bd;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  z-index: 4;
+  background: radial-gradient(ellipse at center, #1b1916 0%, #0d0c0b 70%);
+}
+
+.bar {
+  width: 220px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  border-radius: 2px;
+}
+.bar span {
+  display: block;
+  height: 100%;
+  background: #d9b37c;
+  transform-origin: left;
+  transition: transform 0.2s ease;
+}
+
+.fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background:
+    linear-gradient(rgba(13, 12, 11, 0.55), rgba(13, 12, 11, 0.75)),
+    url("/art/color.webp") center / min(80vh, 90vw) no-repeat,
+    #0d0c0b;
+}
+
+.fallbackCard {
+  max-width: 480px;
+  padding: 20px 22px;
+  border-radius: 10px;
+  background: rgba(24, 22, 20, 0.92);
+  color: #e9e3d9;
+  line-height: 1.6;
+  font-size: 14px;
+}
+.fallbackCard strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.warning {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 56px;
+  z-index: 5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(120, 30, 24, 0.9);
+  color: #fff;
+  font-size: 12px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  white-space: pre-wrap;
+}
+
+.mobileBar {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 3;
+}
+
+.pill {
+  padding: 11px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(28, 28, 30, 0.86);
+  color: #e9e3d9;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pill[data-active="true"] {
+  background: rgba(217, 179, 124, 0.9);
+  color: #1a1712;
+  border-color: transparent;
+}
+.pill:only-child {
+  margin-left: auto;
+}
+
+@media (max-width: 760px) {
+  .copy {
+    top: 76px;
+    bottom: auto;
+    left: 16px;
+    right: 16px;
+  }
+  .eyebrow {
+    margin-bottom: 8px;
+    font-size: 10px;
+  }
+  .title {
+    font-size: 30px;
+  }
+  .lede {
+    display: none;
+  }
+  .hint {
+    display: none;
+  }
+  .hud {
+    top: auto;
+    left: 16px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+}
