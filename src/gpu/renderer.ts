@@ -226,24 +226,21 @@ export class PaintingRenderer {
     this.context.configure({ device, format: this.canvasFormat, alphaMode: "opaque" });
 
     // 텍스처 다운로드 (진행률 합산)
-    const progress = [0, 0];
-    const report = () => this.opts.onProgress?.((progress[0] + progress[1]) / 2, "텍스처 다운로드");
-    const maxSize = this.q.textureSize < 2048 ? this.q.textureSize : undefined;
-    const [colorBmp, heightBmp] = await Promise.all([
-      fetchBitmap(this.opts.colorUrl, (l, t) => ((progress[0] = l / t), report()), maxSize),
-      fetchBitmap(this.opts.heightUrl, (l, t) => ((progress[1] = l / t), report()), maxSize),
-    ]);
-    if (this.disposed) return;
+    const [colorBmp, heightBmp] = await this.fetchArtwork(this.opts.colorUrl, this.opts.heightUrl, (ratio) =>
+      this.opts.onProgress?.(ratio, "텍스처 다운로드"),
+    );
+    if (this.disposed) {
+      colorBmp.close();
+      heightBmp.close();
+      return;
+    }
     this.opts.onProgress?.(1, "셰이더 컴파일");
 
     this.createSamplersAndBuffers();
     this.createGeometry();
 
     this.mips = new MipGenerator(device);
-    this.colorTex = textureFromBitmap(device, colorBmp, "rgba8unorm-srgb", true, "colorMap");
-    this.srcHeightTex = textureFromBitmap(device, heightBmp, "rgba8unorm", false, "heightMap(src)");
-    colorBmp.close();
-    heightBmp.close();
+    this.uploadArtwork(colorBmp, heightBmp);
 
     await this.createPipelines();
     if (this.disposed) return;
@@ -258,6 +255,25 @@ export class PaintingRenderer {
     this.lastTime = performance.now();
     this.statsWindow.start = this.lastTime;
     this.raf = requestAnimationFrame(this.frame);
+  }
+
+  /** 작품 이미지 두 장을 다운로드 · 디코드 (진행률은 두 파일 평균) */
+  private fetchArtwork(colorUrl: string, heightUrl: string, onProgress?: (ratio: number) => void) {
+    const progress = [0, 0];
+    const report = () => onProgress?.((progress[0] + progress[1]) / 2);
+    const maxSize = this.q.textureSize < 2048 ? this.q.textureSize : undefined;
+    return Promise.all([
+      fetchBitmap(colorUrl, (l, t) => ((progress[0] = l / t), report()), maxSize),
+      fetchBitmap(heightUrl, (l, t) => ((progress[1] = l / t), report()), maxSize),
+    ]);
+  }
+
+  /** 디코드된 이미지를 원본 텍스처로 올린다 (비트맵은 여기서 해제) */
+  private uploadArtwork(colorBmp: ImageBitmap, heightBmp: ImageBitmap) {
+    this.colorTex = textureFromBitmap(this.device, colorBmp, "rgba8unorm-srgb", true, "colorMap");
+    this.srcHeightTex = textureFromBitmap(this.device, heightBmp, "rgba8unorm", false, "heightMap(src)");
+    colorBmp.close();
+    heightBmp.close();
   }
 
   private createSamplersAndBuffers() {
@@ -1153,6 +1169,34 @@ export class PaintingRenderer {
       cancelAnimationFrame(this.raf);
     }
   }
+
+  /**
+   * 렌더링할 작품(컬러맵 + 하이트맵)을 교체한다.
+   * 디바이스 · 파이프라인 · 그림자맵은 그대로 두고, 작품 텍스처와 그 파생물(스무딩 높이, 노멀/AO)만 다시 만든다.
+   * 연속으로 호출하면 마지막 요청만 반영된다.
+   */
+  async setArtwork(colorUrl: string, heightUrl: string): Promise<void> {
+    if (this.disposed) return;
+    const token = ++this.artworkToken;
+    const [colorBmp, heightBmp] = await this.fetchArtwork(colorUrl, heightUrl);
+    if (this.disposed || token !== this.artworkToken) {
+      colorBmp.close();
+      heightBmp.close();
+      return;
+    }
+    const old = [this.colorTex, this.srcHeightTex, this.heightTex, this.normalTex];
+    this.uploadArtwork(colorBmp, heightBmp);
+    this.preprocessHeight();
+    this.rebuildNormals(this.store.get().render.heightScale);
+    old.forEach((t) => t.destroy());
+    // 이전 텍스처를 참조하던 바인드 그룹을 비우고 다음 프레임에 전부 다시 그린다
+    this.mainBindGroup = undefined;
+    this.computeGroups.clear();
+    this.shadowsDirty = true;
+    this.ptReset = true;
+    this.forceRender = true;
+  }
+  private artworkToken = 0;
 
   /** 터치로 카메라를 조작할지 (모바일에서 스크롤과 충돌 방지) */
   setTouchEnabled(enabled: boolean) {

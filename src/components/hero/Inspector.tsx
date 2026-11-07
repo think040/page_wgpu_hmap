@@ -20,12 +20,45 @@ import {
 import { QUALITY_LABEL, applyQualityDefaults, resolveQuality, type QualityProfile } from "@/scene/quality";
 import { cssColorOfLight } from "@/gpu/lights";
 import type { RendererStats } from "@/gpu/renderer";
+import { getArtworkLibrary } from "@/scene/artworks";
+import { useArtworks } from "@/scene/useArtworks";
 import { ButtonRow, ColorField, Section, Select, Slider, Toggle, Vec3Field } from "./fields";
 import styles from "./inspector.module.css";
 
-type Tab = "camera" | LightKey | "render";
+/** 사용자용: 등록된 작품 목록에서 렌더링할 item 을 고른다 (등록은 관리자 인스펙터에서) */
+function ArtworkList({ switching }: { switching: boolean }) {
+  const { items, selectedId, loaded, error } = useArtworks();
+  return (
+    <Section title="작품 목록" aside={switching ? <span className={styles.badge}>불러오는 중…</span> : undefined}>
+      <ul className={styles.artList} role="listbox" aria-label="렌더링할 작품">
+        {items.map((a) => (
+          <li key={a.id}>
+            <button
+              type="button"
+              role="option"
+              aria-selected={a.id === selectedId}
+              data-active={a.id === selectedId}
+              className={styles.artItem}
+              onClick={() => getArtworkLibrary().select(a.id)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- 로컬/정적 썸네일 */}
+              <img src={a.colorUrl} alt="" className={styles.artThumb} />
+              <span className={styles.artName}>{a.name}</span>
+              {a.builtin && <span className={styles.artTag}>기본</span>}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {!loaded && <p className={styles.note}>저장된 작품을 불러오는 중…</p>}
+      {error && <p className={styles.warning}>{error}</p>}
+    </Section>
+  );
+}
+
+type Tab = "artwork" | "camera" | LightKey | "render";
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: "artwork", label: "Artwork" },
   { id: "camera", label: "Camera" },
   { id: "directional", label: "Directional" },
   { id: "spot", label: "Spot" },
@@ -142,12 +175,14 @@ export function Inspector({
   stats,
   profile,
   detected,
+  artworkSwitching = false,
   onClose,
 }: {
   store: SceneStore;
   stats: RendererStats | null;
   profile: QualityProfile;
   detected: QualityLevel;
+  artworkSwitching?: boolean;
   onClose: () => void;
 }) {
   const state = useSyncExternalStore(store.subscribe, store.get, store.get);
@@ -183,6 +218,8 @@ export function Inspector({
       </nav>
 
       <div className={styles.scroll}>
+        {tab === "artwork" && <ArtworkList switching={artworkSwitching} />}
+
         {tab === "camera" && (
           <>
             <Section title="Transform">

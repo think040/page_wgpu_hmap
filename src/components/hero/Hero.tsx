@@ -4,8 +4,14 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { PaintingRenderer, type RendererStats } from "@/gpu/renderer";
 import { Store, createDefaultState, type QualityLevel } from "@/scene/state";
 import { QUALITY_LABEL, QUALITY_PROFILES, applyQualityDefaults, detectQuality, resolveQuality } from "@/scene/quality";
+import { getArtworkLibrary } from "@/scene/artworks";
+import { useArtworks } from "@/scene/useArtworks";
+// TODO(관리자 페이지): 관리자 페이지를 만들면 AdminInspector 를 그쪽으로 옮기고 아래 임시 토글을 제거한다.
+import { AdminInspector } from "@/components/admin/AdminInspector";
 import { Inspector } from "./Inspector";
 import styles from "./hero.module.css";
+
+const artworkKey = (a: { colorUrl: string; heightUrl: string }) => `${a.colorUrl}|${a.heightUrl}`;
 
 type Status =
   | { kind: "loading"; progress: number; label: string }
@@ -39,6 +45,9 @@ export default function Hero() {
   const [gpuWarning, setGpuWarning] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState<boolean | null>(null);
   const [touch3D, setTouch3D] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [artworkSwitching, setArtworkSwitching] = useState(false);
+  useArtworks(); // 저장된 작품 목록을 미리 불러온다
 
   const detected = useSyncExternalStore(noopSubscribe, getDetected, () => null);
   const qualitySetting = useSyncExternalStore(store.subscribe, () => store.get().render.quality, () => "auto" as const);
@@ -68,10 +77,33 @@ export default function Hero() {
     if (!canvas || !level) return;
     let disposed = false;
     let renderer: PaintingRenderer | null = null;
+    let unsubscribeArtwork: (() => void) | null = null;
+
+    // 처음엔 기본 작품, 품질 변경으로 재생성될 때는 현재 선택된 작품으로 시작
+    const library = getArtworkLibrary();
+    const initial = library.selected();
+    let applied = artworkKey(initial);
+
+    // 선택된 작품이 바뀌면 렌더러의 텍스처만 교체
+    const applySelected = () => {
+      const r = renderer;
+      const a = library.selected();
+      const key = artworkKey(a);
+      if (!r || disposed || key === applied) return;
+      applied = key;
+      setArtworkSwitching(true);
+      r.setArtwork(a.colorUrl, a.heightUrl)
+        .catch((e: unknown) => {
+          if (!disposed) setGpuWarning(`작품을 불러오지 못했습니다: ${e instanceof Error ? e.message : String(e)}`);
+        })
+        .finally(() => {
+          if (!disposed && applied === key) setArtworkSwitching(false);
+        });
+    };
 
     PaintingRenderer.create(canvas, store, {
-      colorUrl: "/art/color.webp",
-      heightUrl: "/art/height.webp",
+      colorUrl: initial.colorUrl,
+      heightUrl: initial.heightUrl,
       quality: QUALITY_PROFILES[level],
       onProgress: (progress, label) => !disposed && setStatus({ kind: "loading", progress, label }),
       onStats: (s) => !disposed && setStats(s),
@@ -86,6 +118,8 @@ export default function Hero() {
         rendererRef.current = r;
         r.setTouchEnabled(touchRef.current);
         setStatus({ kind: "ready" });
+        unsubscribeArtwork = library.subscribe(applySelected);
+        applySelected(); // 로딩 중에 선택이 바뀌었으면 반영
       })
       .catch((e: unknown) => {
         if (disposed) return;
@@ -99,6 +133,8 @@ export default function Hero() {
 
     return () => {
       disposed = true;
+      unsubscribeArtwork?.();
+      setArtworkSwitching(false);
       io.disconnect();
       renderer?.dispose();
       if (rendererRef.current === renderer) rendererRef.current = null;
@@ -176,9 +212,18 @@ export default function Hero() {
           stats={stats}
           profile={QUALITY_PROFILES[level]}
           detected={detected}
+          artworkSwitching={artworkSwitching}
           onClose={() => setPanelOpen(false)}
         />
       )}
+
+      {/* 임시: 관리자 페이지가 생기기 전까지 히어로에서 관리자 인스펙터를 연다 */}
+      {ready && !adminOpen && (
+        <button type="button" className={styles.adminToggle} onClick={() => setAdminOpen(true)}>
+          관리자 · 작품 등록
+        </button>
+      )}
+      {ready && adminOpen && <AdminInspector onClose={() => setAdminOpen(false)} />}
 
       {loading && (
         <div className={styles.loader} role="status">

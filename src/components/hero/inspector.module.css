@@ -356,6 +356,57 @@
   margin-right: 4px;
 }
 
+/* 작품 목록 (사용자 인스펙터) */
+.artList {
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  padding: 6px 0 2px;
+}
+
+.artItem {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 6px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--ins-text);
+  font-size: 12px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.artItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.artItem[data-active="true"] {
+  background: rgba(217, 179, 124, 0.14);
+  border-color: rgba(217, 179, 124, 0.45);
+}
+
+.artThumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid var(--ins-line);
+}
+
+.artName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artTag {
+  color: var(--ins-accent);
+  font-size: 10px;
+}
+
 @media (max-width: 760px) {
   /* 하단 시트 */
   .panel {

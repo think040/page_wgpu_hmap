@@ -111,6 +111,13 @@
   background: rgba(40, 40, 42, 0.92);
 }
 
+/* 임시 관리자 인스펙터 토글 (관리자 페이지 분리 시 제거) */
+.adminToggle {
+  composes: panelToggle;
+  right: auto;
+  left: 16px;
+}
+
 .loader {
   position: absolute;
   inset: 0;
@@ -215,6 +222,11 @@
 }
 
 @media (max-width: 760px) {
+  .adminToggle {
+    top: auto;
+    left: 12px;
+    bottom: calc(62px + env(safe-area-inset-bottom));
+  }
   .copy {
     top: 76px;
     bottom: auto;
