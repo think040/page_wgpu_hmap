@@ -136,7 +136,7 @@ export function createDefaultState(): SceneState {
     },
     spot: {
       kind: "spot",
-      enabled: true,
+      enabled: false,
       color: "#ffffff",
       useTemperature: true,
       temperature: 3600,
@@ -156,7 +156,7 @@ export function createDefaultState(): SceneState {
     },
     point: {
       kind: "point",
-      enabled: true,
+      enabled: false,
       color: "#cfe0ff",
       useTemperature: false,
       temperature: 7500,
