@@ -131,7 +131,7 @@ export function createDefaultState(): SceneState {
       nearPlane: 0.1,
       softness: 0.2,
       // 왼쪽 위에서 비스듬히 스치는 레이킹 라이트 → 질감 강조
-      rotation: { x: 28, y: 68 },
+      rotation: { x: 50, y: 80 },
       autoRotate: 0,
     },
     spot: {
